@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000; // Render sẽ tự set PORT
 
 // Kết nối Neon qua biến môi trường DATABASE_URL
 const pool = new Pool({
@@ -14,10 +14,17 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false } // Neon yêu cầu SSL
 });
 
+// Route trang chủ
+app.get('/', (req, res) => {
+  res.send('<h1>dangvien-app</h1><p>API is running 👍</p>');
+});
+
+// Route kiểm tra sức khỏe
 app.get('/health', (req, res) => {
   res.json({ ok: true });
 });
 
+// Route test database
 app.get('/db-time', async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT now() AS now');
@@ -28,6 +35,7 @@ app.get('/db-time', async (req, res) => {
   }
 });
 
+// Route lấy danh sách members
 app.get('/members', async (req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM members ORDER BY id DESC');
@@ -38,6 +46,7 @@ app.get('/members', async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Server listening on port ${PORT}`);
 });
+
