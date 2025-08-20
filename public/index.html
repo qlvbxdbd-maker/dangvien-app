@@ -1,54 +1,84 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>Quản lý Đảng viên</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
+    /* Toàn bộ trang dùng Times New Roman */
     body {
       font-family: "Times New Roman", Times, serif;
       line-height: 1.6;
       margin: 24px;
+      background: #ffffff;
+      color: #111827;
     }
+
     h1 {
-      margin-bottom: 16px;
+      margin: 0 0 16px;
+      font-size: 28px;
+      font-weight: 700;
     }
+
+    /* Bảng */
     .table {
       width: 100%;
       border-collapse: collapse;
-      border: 1px solid #e5e7eb;
+      border: 1px solid #e5e7eb; /* viền ngoài */
       background: #fff;
     }
+
     .table th, .table td {
       padding: 12px 14px;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid #e5e7eb; /* đường kẻ hàng */
+      vertical-align: middle;
     }
+
     .table thead th {
-      background: #2563eb;
+      background: #2563eb;   /* xanh đậm */
       color: #fff;
       text-align: left;
       font-weight: 700;
     }
-    .table tbody tr:nth-child(odd) {
-      background: #f8fafc;
+
+    /* Căn giữa cột STT */
+    .col-stt {
+      width: 80px;
+      text-align: center;
+      white-space: nowrap;
     }
-    .table tbody tr:hover {
-      background: #eef2ff;
+
+    /* Nền xen kẽ cho hàng dữ liệu */
+    .table tbody tr:nth-child(odd)  { background: #f8fafc; }
+    .table tbody tr:nth-child(even) { background: #ffffff; }
+
+    /* Hiệu ứng hover */
+    .table tbody tr:hover { background: #eef2ff; }
+
+    /* Nhỏ gọn hơn trên mobile */
+    @media (max-width: 576px) {
+      .col-stt { width: 56px; }
+      h1 { font-size: 22px; }
     }
   </style>
 </head>
 <body>
   <h1>Danh sách Đảng viên</h1>
+
   <table class="table">
     <thead>
       <tr>
+        <th class="col-stt">STT</th>
         <th>Họ và tên</th>
         <th>Email</th>
       </tr>
     </thead>
-    <tbody id="members-body"></tbody>
+    <tbody id="members-body">
+      <!-- Hàng dữ liệu sẽ được JS thêm vào -->
+    </tbody>
   </table>
 
-  <!-- Gắn script -->
+  <!-- Gắn script sau cùng để DOM đã sẵn sàng -->
   <script src="./app.js"></script>
 </body>
 </html>
