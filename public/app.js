@@ -1,50 +1,37 @@
 // public/app.js
-(async function () {
-  // Dùng đường dẫn tương đối để tránh CORS và đổi domain
-  const API_URL = "/members";
+const API_URL = 'https://dangvien-app.onrender.com/members';
 
-  async function loadMembers() {
-    const list = document.getElementById("members-list");
-    if (!list) {
-      console.error("Không thấy phần tử #members-list trong HTML");
-      return;
-    }
+function render(items) {
+  const list = document.getElementById('members-list');
+  list.innerHTML = '';
+  items.forEach(m => {
+    const li = document.createElement('li');
+    li.textContent = `${m.name} — ${m.email}`;
+    list.appendChild(li);
+  });
+}
 
-    // Trạng thái đang tải
-    list.innerHTML = "<li>Đang tải danh sách...</li>";
+async function loadMembers({ page = 1, pageSize = 50 } = {}) {
+  const list = document.getElementById('members-list');
+  list.innerHTML = '<li>Đang tải...</li>';
 
-    try {
-      const res = await fetch(API_URL, {
-        headers: { Accept: "application/json" },
-      });
+  try {
+    const url = new URL(API_URL);
+    url.searchParams.set('page', page);
+    url.searchParams.set('pageSize', pageSize);
 
-      if (!res.ok) {
-        throw new Error(`Fetch ${API_URL} lỗi: HTTP ${res.status}`);
-      }
+    const res = await fetch(url.toString(), { headers: { 'Accept': 'application/json' } });
+    if (!res.ok) throw new Error(`Fetch failed: ${res.status}`);
+    const json = await res.json();
 
-      const json = await res.json();
-
-      // API của bạn trả về { data: [...], paging: {...} }
-      const data = Array.isArray(json?.data) ? json.data : [];
-
-      list.innerHTML = "";
-      if (data.length === 0) {
-        list.innerHTML = "<li>Chưa có đảng viên nào.</li>";
-        return;
-      }
-
-      data.forEach((m) => {
-        const li = document.createElement("li");
-        li.textContent = `${m.name} — ${m.email}`;
-        list.appendChild(li);
-      });
-    } catch (err) {
-      console.error("Lỗi khi tải danh sách:", err);
-      list.innerHTML =
-        "<li style='color:red'>Không tải được danh sách. Mở F12 → Console để xem lỗi chi tiết.</li>";
-    }
+    // Hỗ trợ cả hai dạng: [{...}] hoặc {data:[...]}
+    const items = Array.isArray(json) ? json : json.data || [];
+    render(items);
+  } catch (err) {
+    console.error(err);
+    list.innerHTML = '<li>Lỗi tải dữ liệu. Vui lòng thử lại.</li>';
   }
+}
 
-  // Chờ DOM sẵn sàng rồi mới gọi
-  window.addEventListener("DOMContentLoaded", loadMembers);
-})();
+// Tải sau khi DOM sẵn sàng (ổn định hơn window.onload)
+document.addEventListener('DOMContentLoaded', () => loadMembers());
