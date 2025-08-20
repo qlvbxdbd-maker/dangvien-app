@@ -8,50 +8,47 @@
       font-family: "Times New Roman", Times, serif;
       line-height: 1.6;
       margin: 24px;
-      background: #f9f9f9;
     }
     h1 {
       margin-bottom: 16px;
-      color: #222;
     }
-    table {
+    .table {
       width: 100%;
       border-collapse: collapse;
+      border: 1px solid #e5e7eb;
       background: #fff;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-      border-radius: 6px;
-      overflow: hidden;
     }
-    th, td {
-      padding: 12px 16px;
-      border: 1px solid #ddd;
+    .table th, .table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .table thead th {
+      background: #2563eb;
+      color: #fff;
       text-align: left;
+      font-weight: 700;
     }
-    th {
-      background: #2c7be5;
-      color: white;
+    .table tbody tr:nth-child(odd) {
+      background: #f8fafc;
     }
-    tr:nth-child(even) {
-      background: #f2f6fc;
-    }
-    tr:hover {
-      background: #e9f1fb;
+    .table tbody tr:hover {
+      background: #eef2ff;
     }
   </style>
 </head>
 <body>
   <h1>Danh sách Đảng viên</h1>
-  <table id="members-table">
+  <table class="table">
     <thead>
       <tr>
         <th>Họ và tên</th>
         <th>Email</th>
       </tr>
     </thead>
-    <tbody id="members-list"></tbody>
+    <tbody id="members-body"></tbody>
   </table>
 
-  <!-- Gắn script app.js -->
-  <script src="app.js"></script>
+  <!-- Gắn script -->
+  <script src="./app.js"></script>
 </body>
 </html>
