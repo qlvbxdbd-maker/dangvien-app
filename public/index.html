@@ -5,80 +5,160 @@
   <title>Quản lý Đảng viên</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    /* Toàn bộ trang dùng Times New Roman */
-    body {
+    /* ====== Base ====== */
+    :root{
+      --primary:#2e75db;
+      --primary-600:#245bbb;
+      --border:#e5e7eb;
+      --bg:#f8fafc;
+      --row:#ffffff;
+      --row-alt:#f9fbff;
+      --hover:#eef5ff;
+      --text:#111827;
+      --muted:#6b7280;
+    }
+    html,body{height:100%}
+    body{
       font-family: "Times New Roman", Times, serif;
+      color: var(--text);
+      background: #fff;
       line-height: 1.6;
       margin: 24px;
-      background: #ffffff;
-      color: #111827;
     }
+    h1{ margin: 0 0 16px; }
 
-    h1 {
-      margin: 0 0 16px;
-      font-size: 28px;
-      font-weight: 700;
+    /* ====== Toolbar ====== */
+    .toolbar{
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 12px;
     }
+    .toolbar .search{
+      position: relative;
+    }
+    .toolbar input[type="search"]{
+      width: 100%;
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      border-radius: 8px;
+      outline: none;
+      font-size: 15px;
+      background: var(--bg);
+    }
+    .toolbar .right{ display:flex; gap:10px; }
+    select, button{
+      border: 1px solid var(--border);
+      background: #fff;
+      padding: 9px 12px;
+      border-radius: 8px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+    button.primary{
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+    }
+    button.primary:hover{ background: var(--primary-600); }
+    .muted{ color: var(--muted); font-size: 14px; }
 
-    /* Bảng */
-    .table {
+    /* ====== Table ====== */
+    table{
       width: 100%;
       border-collapse: collapse;
-      border: 1px solid #e5e7eb; /* viền ngoài */
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 6px rgba(0,0,0,.06);
       background: #fff;
     }
-
-    .table th, .table td {
-      padding: 12px 14px;
-      border-bottom: 1px solid #e5e7eb; /* đường kẻ hàng */
-      vertical-align: middle;
-    }
-
-    .table thead th {
-      background: #2563eb;   /* xanh đậm */
+    thead th{
+      background: var(--primary);
       color: #fff;
-      text-align: left;
-      font-weight: 700;
-    }
-
-    /* Căn giữa cột STT */
-    .col-stt {
-      width: 80px;
       text-align: center;
-      white-space: nowrap;
+      padding: 12px 10px;
+      user-select: none;
+      position: relative;
     }
+    thead th.sortable{ cursor: pointer; }
+    thead th.sortable::after{
+      content: "⇅";
+      font-size: 12px;
+      position: absolute;
+      right: 10px; top: 50%;
+      transform: translateY(-50%);
+      opacity: .8;
+    }
+    thead th.sortable.asc::after{ content: "↑"; }
+    thead th.sortable.desc::after{ content: "↓"; }
+    td{
+      border-top: 1px solid var(--border);
+      padding: 10px 12px;
+    }
+    tbody tr:nth-child(even){ background: var(--row-alt); }
+    tbody tr:hover{ background: var(--hover); }
+    td:first-child{ text-align: center; width: 72px; }
 
-    /* Nền xen kẽ cho hàng dữ liệu */
-    .table tbody tr:nth-child(odd)  { background: #f8fafc; }
-    .table tbody tr:nth-child(even) { background: #ffffff; }
+    /* ====== Footer / pagination ====== */
+    .footer{
+      display:flex; justify-content: space-between; align-items:center;
+      margin-top: 12px; gap: 10px; flex-wrap: wrap;
+    }
+    .pagination{ display:flex; align-items:center; gap:8px; }
+    .pagination button[disabled]{ opacity:.5; cursor:not-allowed; }
 
-    /* Hiệu ứng hover */
-    .table tbody tr:hover { background: #eef2ff; }
-
-    /* Nhỏ gọn hơn trên mobile */
-    @media (max-width: 576px) {
-      .col-stt { width: 56px; }
-      h1 { font-size: 22px; }
+    /* ====== Empty / error ====== */
+    .center{
+      text-align:center; padding:20px; color:var(--muted);
     }
   </style>
 </head>
 <body>
   <h1>Danh sách Đảng viên</h1>
 
-  <table class="table">
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="search">
+      <input id="q" type="search" placeholder="Tìm theo tên hoặc email (bỏ dấu, không phân biệt hoa thường)..." />
+    </div>
+    <div class="right">
+      <select id="pageSize">
+        <option value="5">5 dòng/trang</option>
+        <option value="10" selected>10 dòng/trang</option>
+        <option value="20">20 dòng/trang</option>
+        <option value="50">50 dòng/trang</option>
+        <option value="0">Hiển thị tất cả</option>
+      </select>
+      <button id="refresh" class="primary">Làm mới</button>
+    </div>
+    <div class="muted" id="counter">Hiển thị 0/0</div>
+    <div class="muted" id="updatedAt">—</div>
+  </div>
+
+  <!-- Table -->
+  <table>
     <thead>
       <tr>
-        <th class="col-stt">STT</th>
-        <th>Họ và tên</th>
-        <th>Email</th>
+        <th>STT</th>
+        <th id="th-name" class="sortable">Họ và tên</th>
+        <th id="th-email" class="sortable">Email</th>
       </tr>
     </thead>
-    <tbody id="members-body">
-      <!-- Hàng dữ liệu sẽ được JS thêm vào -->
+    <tbody id="members-list">
+      <!-- nội dung sẽ gắn bằng JS -->
     </tbody>
   </table>
 
-  <!-- Gắn script sau cùng để DOM đã sẵn sàng -->
+  <!-- Footer / pagination -->
+  <div class="footer">
+    <div class="muted" id="info"></div>
+    <div class="pagination">
+      <button id="prev">Prev</button>
+      <span id="pageLabel" class="muted"></span>
+      <button id="next">Next</button>
+    </div>
+  </div>
+
   <script src="./app.js"></script>
 </body>
 </html>
