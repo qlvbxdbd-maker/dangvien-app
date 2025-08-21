@@ -2,105 +2,121 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Danh sách Đảng viên</title>
-
-  <!-- Font mặc định toàn trang -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     :root{
-      --primary:#1967d2;
-      --border:#e6e6e6;
-      --zebra:#f9fbff;
+      --blue:#2165d1;
+      --blue-50:#e9f0ff;
+      --border:#e5e7eb;
+      --text:#111827;
     }
-    html,body{
+    html,body{height:100%}
+    body{
       font-family: "Times New Roman", Times, serif;
-      font-size:16px; color:#222; line-height:1.6;
-      margin:0; background:#fff;
+      margin:0;
+      color:var(--text);
+      background:#fff;
     }
-    .container{ max-width:1180px; margin:28px auto; padding:0 16px;}
-    h1{ margin:0 0 16px 0; font-size:30px; font-weight:700;}
+    .container{max-width:1200px;margin:28px auto;padding:0 16px}
+    h1{margin:0 0 16px 0;font-size:36px;font-weight:700}
+
     .toolbar{
-      display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px;
+      display:grid;
+      grid-template-columns: 1fr 150px 150px 160px 150px 130px 110px;
+      gap:10px; align-items:center;
+      margin-bottom:10px;
     }
-    .toolbar input[type="text"], .toolbar input[type="date"], .toolbar select{
-      height:40px; padding:6px 10px; border:1px solid var(--border); border-radius:6px; outline:none;
-      min-width:180px; font-size:16px;
+    .toolbar input[type="text"], .toolbar input[type="date"],
+    .toolbar select{
+      font-family:"Times New Roman", Times, serif;
+      height:38px; border:1px solid var(--border); border-radius:6px;
+      padding:6px 10px; outline:none;
     }
-    .toolbar .grow{ flex:1 1 360px; min-width:260px;}
-
     .btn{
-      height:40px; padding:0 14px; border-radius:8px; border:1px solid var(--border); background:#f8f8f8;
-      cursor:pointer; font-weight:600;
+      font-family:"Times New Roman", Times, serif;
+      height:38px; border-radius:6px; border:1px solid var(--border);
+      background:#f5f7fb; cursor:pointer; padding:0 14px;
     }
-    .btn.primary{ background:var(--primary); color:#fff; border-color:var(--primary);}
-    .btn.ghost{ background:#fff;}
-    .btn:disabled{opacity:.6; cursor:not-allowed}
+    .btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+    .btn.link{background:#fff}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
 
-    .tag{font-size:13px; color:#666}
+    .note{font-size:14px;margin:10px 0 6px;color:#374151}
 
-    table{ width:100%; border-collapse:separate; border-spacing:0; border:1px solid var(--border); border-radius:10px; overflow:hidden}
-    thead th{
-      background:var(--primary); color:#fff; text-align:left; padding:12px 12px; font-weight:700; white-space:nowrap;
+    .table{
+      width:100%; border-collapse:collapse; table-layout:fixed;
+      border:1px solid var(--border);
     }
-    tbody td{padding:12px; border-top:1px solid var(--border);}
-    tbody tr:nth-child(odd){ background:var(--zebra)}
-    tbody tr:hover{ background:#eef5ff}
+    .table thead th{
+      background:var(--blue); color:#fff; text-align:left;
+      padding:10px 12px; font-weight:700; border-right:1px solid #fff;
+    }
+    .table tbody td{
+      border-top:1px solid var(--border); padding:10px 12px;
+    }
+    .table tbody tr:nth-child(even){background:var(--blue-50)}
+    .table th.stt, .table td.stt{width:70px;text-align:center}
+    .table th.w-200{width:200px}
+    .table th.w-140{width:140px}
+    .table th.w-120{width:120px}
+    .table td.double-link{cursor:pointer;color:#0c4fb3}
+    .table td.double-link:hover{text-decoration:underline}
 
-    .right{ text-align:right}
-    .muted{ color:#666}
-    .flex{ display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-    .ml8{ margin-left:8px}
-    .ml16{ margin-left:16px}
-
-    .pagination{ margin:14px 0; display:flex; align-items:center; gap:10px}
-    .pagination .btn{height:36px}
+    .footer-bar{
+      display:flex;justify-content:space-between;align-items:center;
+      gap:10px;margin-top:10px;
+      font-size:14px;
+    }
+    .pager button{margin-left:6px}
 
     /* Modal */
-    .modal{
-      position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; z-index:9999;
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:20px}
+    .modal.open{display:flex}
+    .modal-card{
+      background:#fff; width:min(820px,95vw); border-radius:8px;
+      box-shadow:0 10px 40px rgba(0,0,0,.2); overflow:hidden;
+      font-size:16px;
     }
-    .modal.show{ display:flex }
-    .card{
-      background:#fff; width:min(860px, 92vw); max-height:88vh; overflow:auto;
-      border-radius:12px; border:1px solid var(--border); box-shadow:0 12px 32px rgba(0,0,0,.18);
+    .modal-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--blue);color:#fff}
+    .modal-body{padding:16px}
+    .modal-actions{display:flex;gap:10px;justify-content:flex-end;padding:0 16px 16px}
+    .detail-grid{display:grid;grid-template-columns:180px 1fr;gap:8px 10px}
+    .detail-grid label{font-weight:700}
+    .detail-grid input, .detail-grid textarea{
+      font-family:"Times New Roman", Times, serif;
+      border:1px solid var(--border);border-radius:6px;padding:6px 10px;height:34px
     }
-    .card header{ padding:14px 18px; border-bottom:1px solid var(--border); display:flex; gap:8px; align-items:center; justify-content:space-between}
-    .card .body{ padding:18px}
-    .grid{
-      display:grid; grid-template-columns: 180px 1fr; gap:8px 12px;
-    }
-    .grid div{ padding:8px 0; border-bottom:1px dashed #eee}
-    .grid .label{ color:#555; font-weight:600}
-    .close{ background:#fff; border:1px solid var(--border); border-radius:8px; height:34px; padding:0 12px; cursor:pointer}
-    .printOnly{ display:none }
+    .detail-grid textarea{height:72px}
+
+    /* PRINT */
     @media print{
-      .noPrint{ display:none !important}
-      .printOnly{ display:block !important}
-      body{ background:#fff}
-      table{ page-break-inside:auto }
-      tr{ page-break-inside:avoid; page-break-after:auto }
+      .toolbar, .footer-bar, .modal{display:none !important}
+      .print-range{display:block !important}
+      body{background:#fff}
+      .table thead th{background:#f1f5ff !important;color:#000;border-color:#ddd}
     }
+    .print-range{display:none;margin:6px 0 14px;font-style:italic}
   </style>
 
-  <!-- SheetJS (XLSX) + FileSaver (để tải blob trên Safari cũ) -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
-  <!-- docx (tạo .docx) -->
-  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+  <!-- SheetJS style build (có hỗ trợ style cơ bản) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
+  <!-- docx (xuất DOCX chi tiết) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.3.2/docx.umd.js"></script>
 </head>
 <body>
   <div class="container">
-    <h1 class="noPrint">Danh sách Đảng viên</h1>
+    <h1>Danh sách Đảng viên</h1>
 
-    <div class="toolbar noPrint">
-      <input id="q" class="grow" type="text" placeholder="Tìm theo tên, email (không phân biệt hoa thường)..." />
-      <input id="from" type="date" title="Từ ngày" />
-      <input id="to" type="date"   title="Đến ngày" />
+    <div class="toolbar">
+      <input id="q" type="text" placeholder="Tìm theo tên, email..." />
+      <input id="from" type="date"/>
+      <input id="to" type="date"/>
       <select id="status">
         <option value="">Trạng thái: Tất cả</option>
-        <option value="Đang sinh hoạt">Đang sinh hoạt</option>
-        <option value="Nghỉ sinh hoạt">Nghỉ sinh hoạt</option>
-        <option value="Chuyển đảng">Chuyển đảng</option>
+        <option>Đang sinh hoạt</option>
+        <option>Nghỉ sinh hoạt</option>
+        <option>Chuyển đảng</option>
       </select>
       <select id="pageSize">
         <option value="10">10 dòng/trang</option>
@@ -109,55 +125,70 @@
         <option value="100">100 dòng/trang</option>
         <option value="all">Tất cả</option>
       </select>
-      <button id="refresh" class="btn primary">Làm mới</button>
-      <label class="flex ml8">
-        <input id="exportAll" type="checkbox" />
-        <span class="tag">Xuất tất cả (bỏ qua phân trang)</span>
-      </label>
-      <button id="btnPrint" class="btn ghost ml8">In</button>
-      <button id="btnExcel" class="btn ml8">Xuất Excel (.xlsx)</button>
+      <button id="refreshBtn" class="btn primary">Làm mới</button>
+      <button id="exportAllToggle" class="btn link" title="Bật/tắt xuất toàn bộ">
+        <span id="exportAllIcon">□</span> Xuất tất cả
+      </button>
     </div>
 
-    <table id="tbl">
+    <div class="print-range" id="printRange"></div>
+
+    <table class="table" id="tbl">
       <thead>
         <tr>
-          <th>STT</th>
+          <th class="stt">STT</th>
           <th>Họ và tên</th>
-          <th>Giới tính</th>
-          <th>Đơn vị/Bộ phận</th>
-          <th>Chi bộ</th>
-          <th>Số thẻ Đảng viên</th>
-          <th>Ngày vào Đảng</th>
-          <th>Tuổi Đảng</th>
-          <th>E‑mail</th>
-          <th>Trạng thái</th>
+          <th class="w-120">Giới tính</th>
+          <th class="w-200">Đơn vị/Bộ phận</th>
+          <th class="w-140">Chi bộ</th>
+          <th class="w-140">Số thẻ Đảng viên</th>
+          <th class="w-140">Ngày vào Đảng</th>
+          <th class="w-120">Tuổi Đảng</th>
+          <th class="w-200">E‑mail</th>
+          <th class="w-140">Trạng thái</th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
     </table>
 
-    <div class="pagination noPrint">
-      <button id="prev" class="btn">Trước đó</button>
-      <div class="tag" id="pageInfo">Trang 1/1</div>
-      <button id="next" class="btn">Kế tiếp</button>
-      <div class="tag ml16" id="footInfo"></div>
+    <div class="footer-bar">
+      <div>
+        <button class="btn" id="btnPrint">In</button>
+        <button class="btn" id="btnExport">Xuất Excel</button>
+      </div>
+      <div id="summary"></div>
+      <div class="pager">
+        <button class="btn" id="prev">Trước đó</button>
+        <span id="pageInfo">Trang 1/1</span>
+        <button class="btn" id="next">Kế tiếp</button>
+      </div>
     </div>
   </div>
 
   <!-- Modal chi tiết -->
-  <div id="modal" class="modal noPrint">
-    <div class="card">
-      <header>
-        <strong>Thông tin đảng viên</strong>
-        <div class="flex">
-          <button id="btnEdit" class="btn ghost">Sửa</button>
-          <button id="btnPrintDetail" class="btn ghost">In</button>
-          <button id="btnDocx" class="btn primary">Xuất DOCX</button>
-          <button id="btnClose" class="close">Đóng</button>
+  <div class="modal" id="mDetail">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div id="mdTitle">Thông tin đảng viên</div>
+        <button class="btn" onclick="closeDetail()">Đóng</button>
+      </div>
+      <div class="modal-body">
+        <div class="detail-grid">
+          <label>Họ và tên</label><input id="mdName">
+          <label>Giới tính</label><input id="mdGender">
+          <label>Đơn vị/Bộ phận</label><input id="mdDept">
+          <label>Chi bộ</label><input id="mdCell">
+          <label>Số thẻ Đảng viên</label><input id="mdCard">
+          <label>Ngày vào Đảng</label><input id="mdJoin" type="date">
+          <label>Email</label><input id="mdEmail">
+          <label>Trạng thái</label><input id="mdStatus">
+          <label>Ghi chú</label><textarea id="mdNote"></textarea>
         </div>
-      </header>
-      <div class="body" id="detailBody">
-        <div class="grid" id="detailGrid"></div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn" id="btnPrintDetail">In</button>
+        <button class="btn" id="btnDocx">Xuất DOCX</button>
+        <button class="btn primary" id="btnSave">Lưu tạm (local)</button>
       </div>
     </div>
   </div>
