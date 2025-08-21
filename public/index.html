@@ -4,191 +4,194 @@
   <meta charset="utf-8" />
   <title>Danh sách Đảng viên</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Font + Reset nhỏ -->
   <style>
-    :root{
-      --blue:#2165d1;
-      --blue-50:#e9f0ff;
-      --border:#e5e7eb;
-      --text:#111827;
+    :root{ --blue:#2f6feb; --border:#dcdfe6; --text:#222; --muted:#666; }
+    html,body{ font-family:"Times New Roman", Times, serif; color:var(--text); }
+    *,*:before,*:after{ box-sizing:border-box; }
+
+    .container{ max-width:1180px; margin:28px auto 60px; padding:0 12px; }
+
+    h1.title{
+      text-align:center; font-size:34px; font-weight:700; letter-spacing:.4px;
+      margin:0 0 12px;
     }
-    html,body{height:100%}
-    body{
-      font-family: "Times New Roman", Times, serif;
-      margin:0;
-      color:var(--text);
-      background:#fff;
+    .subline{
+      text-align:center; color:var(--muted); font-style:italic; margin-bottom:12px;
     }
-    .container{max-width:1200px;margin:28px auto;padding:0 16px}
-    h1{margin:0 0 16px 0;font-size:36px;font-weight:700}
 
     .toolbar{
-      display:grid;
-      grid-template-columns: 1fr 150px 150px 160px 150px 130px 110px;
-      gap:10px; align-items:center;
-      margin-bottom:10px;
+      display:grid; grid-template-columns: 1fr repeat(2,160px) 140px 120px 110px 120px 110px;
+      gap:10px; align-items:center; margin:10px 0 14px;
     }
-    .toolbar input[type="text"], .toolbar input[type="date"],
-    .toolbar select{
-      font-family:"Times New Roman", Times, serif;
-      height:38px; border:1px solid var(--border); border-radius:6px;
-      padding:6px 10px; outline:none;
-    }
-    .btn{
-      font-family:"Times New Roman", Times, serif;
-      height:38px; border-radius:6px; border:1px solid var(--border);
-      background:#f5f7fb; cursor:pointer; padding:0 14px;
-    }
-    .btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
-    .btn.link{background:#fff}
-    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .toolbar > *{ height:38px; font-size:15px; padding:6px 10px; border:1px solid var(--border); border-radius:6px; }
+    .toolbar input[type="date"]{ padding:4px 10px; }
+    .toolbar select{ cursor:pointer; }
+    .toolbar .btn{ background:#fff; cursor:pointer; border-color:#bbb; }
+    .btn.primary{ background:var(--blue); color:#fff; border-color:var(--blue); }
+    .btn.ghost{ background:#fafafa; }
+    .btn:disabled{ opacity:.55; cursor:not-allowed; }
+    .left-actions{ grid-column: 1 / span 3; display:flex; gap:8px; align-items:center; }
+    .left-actions input[type="text"]{ flex:1; }
 
-    .note{font-size:14px;margin:10px 0 6px;color:#374151}
+    .table-wrap{ border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+    table{ width:100%; border-collapse:collapse; }
+    thead th{
+      background:var(--blue); color:#fff; text-align:left; padding:10px 12px; font-weight:700;
+      font-size:15px; border-right:1px solid rgba(255,255,255,.2);
+      white-space:nowrap;
+    }
+    tbody td{
+      padding:10px 12px; border-top:1px solid var(--border); font-size:15px;
+      vertical-align:middle;
+    }
+    tbody tr:nth-child(odd){ background:#fcfdff; }
+    .nowrap{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
-    .table{
-      width:100%; border-collapse:collapse; table-layout:fixed;
-      border:1px solid var(--border);
+    .footer{
+      display:flex; align-items:center; gap:10px; justify-content:space-between;
+      margin-top:10px; color:var(--muted); font-size:14px;
     }
-    .table thead th{
-      background:var(--blue); color:#fff; text-align:left;
-      padding:10px 12px; font-weight:700; border-right:1px solid #fff;
-    }
-    .table tbody td{
-      border-top:1px solid var(--border); padding:10px 12px;
-    }
-    .table tbody tr:nth-child(even){background:var(--blue-50)}
-    .table th.stt, .table td.stt{width:70px;text-align:center}
-    .table th.w-200{width:200px}
-    .table th.w-140{width:140px}
-    .table th.w-120{width:120px}
-    .table td.double-link{cursor:pointer;color:#0c4fb3}
-    .table td.double-link:hover{text-decoration:underline}
-
-    .footer-bar{
-      display:flex;justify-content:space-between;align-items:center;
-      gap:10px;margin-top:10px;
-      font-size:14px;
-    }
-    .pager button{margin-left:6px}
+    .pager{ display:flex; gap:6px; }
+    .pager button{ height:32px; padding:0 12px; border:1px solid var(--border); border-radius:6px;
+                   background:#fff; cursor:pointer; }
+    .pager span{ line-height:32px; }
 
     /* Modal */
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;padding:20px}
-    .modal.open{display:flex}
+    .modal{
+      position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:flex-start;
+      justify-content:center; padding:60px 12px 24px; z-index:999;
+    }
+    .modal.show{ display:flex; }
     .modal-card{
-      background:#fff; width:min(820px,95vw); border-radius:8px;
-      box-shadow:0 10px 40px rgba(0,0,0,.2); overflow:hidden;
-      font-size:16px;
+      width:min(900px, 100%); background:#fff; border-radius:10px; box-shadow:0 10px 40px rgba(0,0,0,.15);
+      overflow:hidden;
     }
-    .modal-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--blue);color:#fff}
-    .modal-body{padding:16px}
-    .modal-actions{display:flex;gap:10px;justify-content:flex-end;padding:0 16px 16px}
-    .detail-grid{display:grid;grid-template-columns:180px 1fr;gap:8px 10px}
-    .detail-grid label{font-weight:700}
-    .detail-grid input, .detail-grid textarea{
-      font-family:"Times New Roman", Times, serif;
-      border:1px solid var(--border);border-radius:6px;padding:6px 10px;height:34px
+    .modal-head{
+      display:flex; justify-content:space-between; align-items:center; padding:12px 16px;
+      border-bottom:1px solid var(--border); background:#f6f8fa;
     }
-    .detail-grid textarea{height:72px}
+    .modal-body{ padding:16px; }
+    .grid2{ display:grid; grid-template-columns: 180px 1fr; row-gap:8px; column-gap:16px; }
+    .grid2 label{ color:var(--muted); }
+    .grid2 input, .grid2 select{
+      height:34px; border:1px solid var(--border); border-radius:6px; padding:6px 8px; font-size:15px;
+    }
+    .modal-foot{
+      padding:12px 16px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px;
+      background:#fcfcfd;
+    }
 
-    /* PRINT */
+    /* In ấn */
     @media print{
-      .toolbar, .footer-bar, .modal{display:none !important}
-      .print-range{display:block !important}
-      body{background:#fff}
-      .table thead th{background:#f1f5ff !important;color:#000;border-color:#ddd}
+      .toolbar, .footer, .modal{ display:none !important; }
+      body{ margin:0; }
+      .container{ max-width:none; margin:0; padding:0; }
+      .table-wrap{ border:none; }
+      thead th, tbody td{ border:1px solid #000; }
+      @page{ size:A4 landscape; margin:12mm; }
     }
-    .print-range{display:none;margin:6px 0 14px;font-style:italic}
   </style>
 
-  <!-- SheetJS style build (có hỗ trợ style cơ bản) -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
-  <!-- docx (xuất DOCX chi tiết) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/8.3.2/docx.umd.js"></script>
+  <!-- SheetJS + FileSaver + docx (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.min.js"></script>
 </head>
 <body>
   <div class="container">
-    <h1>Danh sách Đảng viên</h1>
+    <h1 class="title">Danh sách Đảng viên</h1>
+    <div class="subline" id="subline"></div>
 
-    <div class="toolbar">
-      <input id="q" type="text" placeholder="Tìm theo tên, email..." />
-      <input id="from" type="date"/>
-      <input id="to" type="date"/>
-      <select id="status">
-        <option value="">Trạng thái: Tất cả</option>
-        <option>Đang sinh hoạt</option>
-        <option>Nghỉ sinh hoạt</option>
-        <option>Chuyển đảng</option>
-      </select>
-      <select id="pageSize">
-        <option value="10">10 dòng/trang</option>
-        <option value="20">20 dòng/trang</option>
-        <option value="50">50 dòng/trang</option>
-        <option value="100">100 dòng/trang</option>
-        <option value="all">Tất cả</option>
-      </select>
-      <button id="refreshBtn" class="btn primary">Làm mới</button>
-      <button id="exportAllToggle" class="btn link" title="Bật/tắt xuất toàn bộ">
-        <span id="exportAllIcon">□</span> Xuất tất cả
-      </button>
+    <div class="toolbar" id="toolbar">
+      <div class="left-actions">
+        <input id="q" type="text" placeholder="Tìm theo tên, email (không phân biệt hoa thường, có bỏ dấu)…" />
+        <select id="status">
+          <option value="">Trạng thái: Tất cả</option>
+          <option value="Đang sinh hoạt">Đang sinh hoạt</option>
+          <option value="Nghỉ sinh hoạt">Nghỉ sinh hoạt</option>
+          <option value="Chuyển Đảng">Chuyển Đảng</option>
+        </select>
+        <select id="pageSize">
+          <option value="10">10 dòng/trang</option>
+          <option value="20">20 dòng/trang</option>
+          <option value="50">50 dòng/trang</option>
+          <option value="100">100 dòng/trang</option>
+          <option value="all">Tất cả</option>
+        </select>
+      </div>
+
+      <input id="fromDate" type="date" />
+      <input id="toDate" type="date" />
+      <button id="btnRefresh" class="btn">Làm mới</button>
+      <label style="display:flex;align-items:center;gap:6px">
+        <input id="exportAll" type="checkbox" /> Xuất tất cả (bỏ qua phân trang)
+      </label>
+      <button id="btnExcel" class="btn">Xuất Excel</button>
+      <button id="btnPrint" class="btn ghost">In</button>
     </div>
 
-    <div class="print-range" id="printRange"></div>
+    <div class="table-wrap">
+      <table id="tbl">
+        <thead>
+          <tr>
+            <th style="width:70px">STT</th>
+            <th style="width:240px">Họ và tên</th>
+            <th style="width:110px">Giới tính</th>
+            <th style="width:170px">Đơn vị/Bộ phận</th>
+            <th style="width:160px">Chi bộ</th>
+            <th style="width:160px">Số thẻ Đảng viên</th>
+            <th style="width:140px">Ngày vào Đảng</th>
+            <th style="width:110px">Tuổi Đảng</th>
+            <th style="width:220px">E-mail</th>
+            <th style="width:150px">Trạng thái</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
 
-    <table class="table" id="tbl">
-      <thead>
-        <tr>
-          <th class="stt">STT</th>
-          <th>Họ và tên</th>
-          <th class="w-120">Giới tính</th>
-          <th class="w-200">Đơn vị/Bộ phận</th>
-          <th class="w-140">Chi bộ</th>
-          <th class="w-140">Số thẻ Đảng viên</th>
-          <th class="w-140">Ngày vào Đảng</th>
-          <th class="w-120">Tuổi Đảng</th>
-          <th class="w-200">E‑mail</th>
-          <th class="w-140">Trạng thái</th>
-        </tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
-
-    <div class="footer-bar">
-      <div>
-        <button class="btn" id="btnPrint">In</button>
-        <button class="btn" id="btnExport">Xuất Excel</button>
-      </div>
-      <div id="summary"></div>
+    <div class="footer">
+      <div id="stats"></div>
       <div class="pager">
-        <button class="btn" id="prev">Trước đó</button>
+        <button id="prev">Trước đó</button>
         <span id="pageInfo">Trang 1/1</span>
-        <button class="btn" id="next">Kế tiếp</button>
+        <button id="next">Kế tiếp</button>
       </div>
     </div>
   </div>
 
   <!-- Modal chi tiết -->
-  <div class="modal" id="mDetail">
+  <div id="dlg" class="modal" aria-hidden="true">
     <div class="modal-card">
       <div class="modal-head">
-        <div id="mdTitle">Thông tin đảng viên</div>
-        <button class="btn" onclick="closeDetail()">Đóng</button>
+        <strong id="dlgTitle">Chi tiết Đảng viên</strong>
+        <button id="dlgClose" class="btn">Đóng</button>
       </div>
       <div class="modal-body">
-        <div class="detail-grid">
-          <label>Họ và tên</label><input id="mdName">
-          <label>Giới tính</label><input id="mdGender">
-          <label>Đơn vị/Bộ phận</label><input id="mdDept">
-          <label>Chi bộ</label><input id="mdCell">
-          <label>Số thẻ Đảng viên</label><input id="mdCard">
-          <label>Ngày vào Đảng</label><input id="mdJoin" type="date">
-          <label>Email</label><input id="mdEmail">
-          <label>Trạng thái</label><input id="mdStatus">
-          <label>Ghi chú</label><textarea id="mdNote"></textarea>
+        <div class="grid2" id="form">
+          <label>Họ và tên</label><input id="f_name" type="text" disabled />
+          <label>Giới tính</label>
+          <select id="f_gender" disabled>
+            <option>Nam</option><option>Nữ</option><option>Khác</option>
+          </select>
+          <label>Đơn vị/Bộ phận</label><input id="f_unit" type="text" disabled />
+          <label>Chi bộ</label><input id="f_branch" type="text" disabled />
+          <label>Số thẻ Đảng viên</label><input id="f_card" type="text" disabled />
+          <label>Ngày vào Đảng</label><input id="f_joined" type="date" disabled />
+          <label>Email</label><input id="f_email" type="email" disabled />
+          <label>Trạng thái</label>
+          <select id="f_status" disabled>
+            <option>Đang sinh hoạt</option><option>Nghỉ sinh hoạt</option><option>Chuyển Đảng</option>
+          </select>
+          <label>Ghi chú</label><input id="f_note" type="text" disabled />
         </div>
       </div>
-      <div class="modal-actions">
-        <button class="btn" id="btnPrintDetail">In</button>
-        <button class="btn" id="btnDocx">Xuất DOCX</button>
-        <button class="btn primary" id="btnSave">Lưu tạm (local)</button>
+      <div class="modal-foot">
+        <button id="btnEdit" class="btn">Sửa</button>
+        <button id="btnSave" class="btn primary" disabled>Lưu</button>
+        <button id="btnPrintOne" class="btn ghost">In</button>
+        <button id="btnDocx" class="btn">Xuất DOCX</button>
       </div>
     </div>
   </div>
