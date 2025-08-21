@@ -1,161 +1,135 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <title>Quản lý Đảng viên</title>
+  <meta charset="utf-8" />
+  <title>Danh sách Đảng viên</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Times New Roman toàn site -->
   <style>
-    /* ====== Base ====== */
     :root{
-      --primary:#2e75db;
-      --primary-600:#245bbb;
+      --primary:#2563eb;
+      --row:#0ea5e9;
       --border:#e5e7eb;
-      --bg:#f8fafc;
-      --row:#ffffff;
-      --row-alt:#f9fbff;
-      --hover:#eef5ff;
       --text:#111827;
       --muted:#6b7280;
+      --bg:#f8fafc;
     }
-    html,body{height:100%}
-    body{
+    html,body{
       font-family: "Times New Roman", Times, serif;
-      color: var(--text);
-      background: #fff;
-      line-height: 1.6;
-      margin: 24px;
+      color:var(--text);
+      background:var(--bg);
+      margin:0;
+      padding:0;
     }
-    h1{ margin: 0 0 16px; }
+    .container{max-width:1240px; margin:28px auto; padding:0 16px;}
+    h1{margin:0 0 18px; font-size:28px; font-weight:700;}
 
-    /* ====== Toolbar ====== */
     .toolbar{
-      display: grid;
-      grid-template-columns: 1fr auto auto auto;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 12px;
+      display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:8px 0 14px;
     }
-    .toolbar .search{
-      position: relative;
+    .toolbar input[type="text"], .toolbar input[type="date"], .toolbar select{
+      height:40px; padding:0 12px; border:1px solid var(--border); border-radius:8px; background:#fff;
     }
-    .toolbar input[type="search"]{
-      width: 100%;
-      border: 1px solid var(--border);
-      padding: 10px 14px;
-      border-radius: 8px;
-      outline: none;
-      font-size: 15px;
-      background: var(--bg);
+    .toolbar .grow{ flex:1 1 350px; min-width:280px; }
+    .btn{
+      height:40px; border-radius:8px; border:1px solid var(--primary);
+      background:var(--primary); color:#fff; padding:0 14px; cursor:pointer; font-weight:600;
     }
-    .toolbar .right{ display:flex; gap:10px; }
-    select, button{
-      border: 1px solid var(--border);
-      background: #fff;
-      padding: 9px 12px;
-      border-radius: 8px;
-      font-size: 15px;
-      cursor: pointer;
-    }
-    button.primary{
-      background: var(--primary);
-      color: #fff;
-      border-color: var(--primary);
-    }
-    button.primary:hover{ background: var(--primary-600); }
-    .muted{ color: var(--muted); font-size: 14px; }
+    .btn-outline{ background:#fff; color:var(--primary); }
+    .btn:disabled{ opacity:.6; cursor:not-allowed; }
 
-    /* ====== Table ====== */
-    table{
-      width: 100%;
-      border-collapse: collapse;
-      border: 1px solid var(--border);
-      box-shadow: 0 2px 6px rgba(0,0,0,.06);
-      background: #fff;
+    .table{
+      width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--border);
+      border-radius:10px; overflow:hidden;
     }
-    thead th{
-      background: var(--primary);
-      color: #fff;
-      text-align: center;
-      padding: 12px 10px;
-      user-select: none;
-      position: relative;
+    .table thead th{
+      background:var(--primary); color:#fff; text-align:left; padding:12px 14px; font-size:15px;
     }
-    thead th.sortable{ cursor: pointer; }
-    thead th.sortable::after{
-      content: "⇅";
-      font-size: 12px;
-      position: absolute;
-      right: 10px; top: 50%;
-      transform: translateY(-50%);
-      opacity: .8;
+    .table tbody td{
+      border-top:1px solid var(--border); padding:12px 14px; vertical-align:top;
     }
-    thead th.sortable.asc::after{ content: "↑"; }
-    thead th.sortable.desc::after{ content: "↓"; }
-    td{
-      border-top: 1px solid var(--border);
-      padding: 10px 12px;
-    }
-    tbody tr:nth-child(even){ background: var(--row-alt); }
-    tbody tr:hover{ background: var(--hover); }
-    td:first-child{ text-align: center; width: 72px; }
+    .table tbody tr:nth-child(odd){ background:#f9fbff; }
+    .table tbody tr:hover{ background:#eef5ff; }
 
-    /* ====== Footer / pagination ====== */
     .footer{
-      display:flex; justify-content: space-between; align-items:center;
-      margin-top: 12px; gap: 10px; flex-wrap: wrap;
+      display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:12px; color:var(--muted);
+      flex-wrap:wrap;
     }
-    .pagination{ display:flex; align-items:center; gap:8px; }
-    .pagination button[disabled]{ opacity:.5; cursor:not-allowed; }
+    .pager{display:flex; gap:8px;}
+    .pager .btn{height:36px; padding:0 12px;}
+    .count{font-size:14px;}
+    .sep{color:#cbd5e1}
+    small{color:var(--muted);}
 
-    /* ====== Empty / error ====== */
-    .center{
-      text-align:center; padding:20px; color:var(--muted);
+    @media (max-width: 640px){
+      .hide-sm{ display:none; }
     }
   </style>
+
+  <!-- SheetJS – xuất XLSX -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.19.3/dist/xlsx.full.min.js"></script>
 </head>
 <body>
-  <h1>Danh sách Đảng viên</h1>
+  <div class="container">
+    <h1>Danh sách Đảng viên</h1>
 
-  <!-- Toolbar -->
-  <div class="toolbar">
-    <div class="search">
-      <input id="q" type="search" placeholder="Tìm theo tên hoặc email (bỏ dấu, không phân biệt hoa thường)..." />
-    </div>
-    <div class="right">
-      <select id="pageSize">
-        <option value="5">5 dòng/trang</option>
-        <option value="10" selected>10 dòng/trang</option>
+    <div class="toolbar">
+      <input id="q" class="grow" type="text"
+             placeholder="Tìm theo tên, email (không phân biệt hoa thường)..." />
+
+      <label class="hide-sm"><small>Từ ngày:</small><br/>
+        <input id="from" type="date">
+      </label>
+
+      <label class="hide-sm"><small>Đến ngày:</small><br/>
+        <input id="to" type="date">
+      </label>
+
+      <select id="pageSize" title="Số dòng/trang">
+        <option value="10">10 dòng/trang</option>
         <option value="20">20 dòng/trang</option>
         <option value="50">50 dòng/trang</option>
-        <option value="0">Hiển thị tất cả</option>
+        <option value="100">100 dòng/trang</option>
       </select>
-      <button id="refresh" class="primary">Làm mới</button>
+
+      <button id="btnRefresh" class="btn">Làm mới</button>
+
+      <label style="display:flex; align-items:center; gap:6px; margin-left:auto">
+        <input id="chkAll" type="checkbox"> <small>Xuất <b>tất cả</b> (bỏ qua phân trang)</small>
+      </label>
+      <button id="btnExport" class="btn btn-outline">Xuất Excel (.xlsx)</button>
     </div>
-    <div class="muted" id="counter">Hiển thị 0/0</div>
-    <div class="muted" id="updatedAt">—</div>
-  </div>
 
-  <!-- Table -->
-  <table>
-    <thead>
+    <table class="table">
+      <thead>
       <tr>
-        <th>STT</th>
-        <th id="th-name" class="sortable">Họ và tên</th>
-        <th id="th-email" class="sortable">Email</th>
+        <th style="width:70px">STT</th>
+        <th>Họ và tên</th>
+        <th class="hide-sm">Giới tính</th>
+        <th class="hide-sm">Đơn vị/Bộ phận</th>
+        <th class="hide-sm">Chi bộ</th>
+        <th class="hide-sm">Số thẻ Đảng viên</th>
+        <th>Ngày vào Đảng</th>
+        <th>Tuổi Đảng</th>
+        <th>E‑mail</th>
       </tr>
-    </thead>
-    <tbody id="members-list">
-      <!-- nội dung sẽ gắn bằng JS -->
-    </tbody>
-  </table>
+      </thead>
+      <tbody id="tbody">
+      <tr><td colspan="9">Đang tải dữ liệu…</td></tr>
+      </tbody>
+    </table>
 
-  <!-- Footer / pagination -->
-  <div class="footer">
-    <div class="muted" id="info"></div>
-    <div class="pagination">
-      <button id="prev">Prev</button>
-      <span id="pageLabel" class="muted"></span>
-      <button id="next">Next</button>
+    <div class="footer">
+      <div class="count">
+        <span id="showing">Hiển thị —</span>
+        <span class="sep">•</span>
+        <span id="updated">Cập nhật: —</span>
+      </div>
+      <div class="pager">
+        <button id="prev" class="btn btn-outline">Trước đó</button>
+        <span id="pageInfo" style="align-self:center"></span>
+        <button id="next" class="btn btn-outline">Kế tiếp</button>
+      </div>
     </div>
   </div>
 
