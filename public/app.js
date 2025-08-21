@@ -1,343 +1,367 @@
-/* ====== Cấu hình API & trạng thái ====== */
-const API = 'https://dangvien-app.onrender.com/members'; // API của bạn (GET)
-const state = {
-  all: [],         // dữ liệu thô (lấy 1 lần về bộ nhớ)
-  filtered: [],    // sau khi áp các bộ lọc
-  page: 1,
-  pageSize: 10,    // hoặc 'all'
-  q: '',
-  from: '',
-  to: '',
-  status: '',      // Đang sinh hoạt / Nghỉ sinh hoạt / Chuyển đảng / ''
-  exportAll: false,
-  currentDetail: null,
-};
+/* ====== Cấu hình API & util ====== */
+const API_URL = "https://dangvien-app.onrender.com/members"; // REST GET ?page&pageSize, v.v.
+const tbody = document.getElementById("tbody");
+const q = document.getElementById("q");
+const statusSel = document.getElementById("status");
+const fromDate = document.getElementById("fromDate");
+const toDate   = document.getElementById("toDate");
+const pageSizeSel = document.getElementById("pageSize");
+const exportAllChk = document.getElementById("exportAll");
+const pageInfo = document.getElementById("pageInfo");
+const stats = document.getElementById("stats");
+const subline = document.getElementById("subline");
 
-/* ====== Trợ giúp ====== */
-const $ = (sel) => document.querySelector(sel);
-const tbody = $('#tbody');
-const pageSizeEl = $('#pageSize');
-const pageInfo = $('#pageInfo');
-const summary = $('#summary');
-const printRange = $('#printRange');
+const btnRefresh = document.getElementById("btnRefresh");
+const btnExcel   = document.getElementById("btnExcel");
+const btnPrint   = document.getElementById("btnPrint");
+const prevBtn    = document.getElementById("prev");
+const nextBtn    = document.getElementById("next");
 
-function vnNormalize(s=''){
-  return s.toLowerCase()
-    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
-    .replace(/đ/g,'d');
+/* modal */
+const dlg = document.getElementById("dlg");
+const dlgClose = document.getElementById("dlgClose");
+const dlgTitle = document.getElementById("dlgTitle");
+const f_name = document.getElementById("f_name");
+const f_gender = document.getElementById("f_gender");
+const f_unit = document.getElementById("f_unit");
+const f_branch = document.getElementById("f_branch");
+const f_card = document.getElementById("f_card");
+const f_joined = document.getElementById("f_joined");
+const f_email = document.getElementById("f_email");
+const f_status = document.getElementById("f_status");
+const f_note = document.getElementById("f_note");
+const btnEdit = document.getElementById("btnEdit");
+const btnSave = document.getElementById("btnSave");
+const btnDocx = document.getElementById("btnDocx");
+const btnPrintOne = document.getElementById("btnPrintOne");
+
+let allData = [];   // cache toàn bộ (nếu server không hỗ trợ page)
+let data = [];      // sau lọc
+let page = 1;
+let pageSize = 10;
+let totalPages = 1;
+let currentDetail = null;
+
+/* Chuẩn hoá chuỗi: bỏ dấu + lower */
+function norm(s=''){
+  return s.normalize('NFD')
+          .replace(/[\u0300-\u036f]/g,'')
+          .replace(/đ/g,'d').replace(/Đ/g,'D')
+          .toLowerCase();
 }
-function formatDate(d){
+function formatDateISO(d){
   if(!d) return '';
   const dt = new Date(d);
-  if(Number.isNaN(dt.getTime())) return '';
-  const dd = String(dt.getDate()).padStart(2,'0');
-  const mm = String(dt.getMonth()+1).padStart(2,'0');
-  const yyyy = dt.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
+  if (isNaN(dt)) return '';
+  return dt.toISOString().slice(0,10);
 }
-function partyAge(joinDate){
+function calcAgeParty(joinDate){
   if(!joinDate) return '';
-  const j = new Date(joinDate);
-  const now = new Date();
-  const years = now.getFullYear() - j.getFullYear();
-  const m = now.getMonth() - j.getMonth();
-  const d = now.getDate() - j.getDate();
-  let y = years;
-  if(m<0 || (m===0 && d<0)) y--;
-  return `${Math.max(0,y)} năm`;
+  const a = new Date(joinDate);
+  const b = new Date();
+  if (isNaN(a)) return '';
+  const years = Math.max(0, Math.floor((b - a)/(365.25*24*3600*1000)));
+  return `${years} năm`;
 }
 
-/* ====== Lấy dữ liệu ====== */
-/* Backend của bạn trả về {data, paging}. Ta tải ALL về 1 lần để lọc client. */
-async function fetchAll() {
-  // tải trang đầu để biết tổng
-  const pageSize = 100; // 100/turn để giảm số request
-  let page = 1;
-  let all = [];
-  while(true){
-    const url = new URL(API);
-    url.searchParams.set('page', page);
-    url.searchParams.set('pageSize', pageSize);
-    const res = await fetch(url.toString(), {headers:{Accept:'application/json'}});
-    if(!res.ok) throw new Error('Không tải được dữ liệu');
-    const js = await res.json();
-    const list = js.data || js || [];
-    all = all.concat(list);
-    if(!js.paging || list.length < pageSize) break;
-    if(js.paging && page * pageSize >= (js.paging.total || all.length)) break;
-    page++;
-  }
-
-  // Bổ sung các trường giả lập (vì backend ban đầu chỉ có id,name,email,joined_at)
-  state.all = all.map((x,i)=>({
-    id: x.id,
-    name: x.name,
-    gender: x.gender || (i%2===0 ? 'Nam' : 'Nữ'),
-    dept: x.dept || '',
-    cell: x.cell || '',
-    card: x.card || '',
-    joined_at: x.joined_at || x.joinedAt || '',
-    email: x.email || '',
-    status: x.status || 'Đang sinh hoạt',
-    note: x.note || ''
+/* ============ Tải dữ liệu ============ */
+async function fetchAll(){
+  // Server ở bài trước đã trả đầy đủ khi gọi /members (không phân trang)
+  const res = await fetch(API_URL, { headers:{'accept':'application/json'}});
+  const js  = await res.json();
+  const arr = Array.isArray(js.data) ? js.data : (Array.isArray(js)? js : []);
+  // map thêm các trường mẫu (demo)
+  allData = arr.map((m, idx) => ({
+    id: m.id ?? idx+1,
+    name: m.name ?? '',
+    email: m.email ?? '',
+    joined_at: m.joined_at ?? '',
+    gender: m.gender ?? (idx%2 ? 'Nữ' : 'Nam'),
+    unit: m.unit ?? 'Phòng/ban A',
+    branch: m.branch ?? 'Chi bộ 1',
+    card_no: m.card_no ?? '',
+    status: m.status ?? 'Đang sinh hoạt',
+    note: m.note ?? ''
   }));
 }
 
-/* ====== Áp bộ lọc & phân trang ====== */
+/* ============ Lọc + phân trang + render ============ */
 function applyFilters(){
-  const {q, from, to, status} = state;
+  const s = norm(q.value.trim());
+  const st = statusSel.value;
+  const f = fromDate.value ? new Date(fromDate.value) : null;
+  const t = toDate.value ? new Date(toDate.value) : null;
 
-  // cập nhật dòng "in" hiển thị khoảng thời gian
-  printRange.textContent = (from || to)
-    ? `Khoảng thời gian: ${from ? formatDate(from): '…'} – ${to ? formatDate(to) : '…'}`
-    : '';
+  data = allData.filter(x=>{
+    const key = norm(`${x.name} ${x.email}`);
+    if (s && !key.includes(s)) return false;
 
-  const qn = vnNormalize(q);
-  let arr = state.all.filter(x=>{
-    // tìm theo tên/email bỏ dấu
-    const okQ = !qn || vnNormalize(x.name).includes(qn) ||
-                        vnNormalize(x.email).includes(qn);
-    const dt = x.joined_at ? new Date(x.joined_at) : null;
-    const okFrom = !from || (dt && dt >= new Date(from));
-    const okTo   = !to   || (dt && dt <= new Date(to));
-    const okStatus = !status || x.status === status;
-    return okQ && okFrom && okTo && okStatus;
+    if (st && x.status !== st) return false;
+
+    if (f || t){
+      const j = new Date(x.joined_at);
+      if (isNaN(j)) return false;
+      if (f && j < f) return false;
+      if (t && j > t) return false;
+    }
+    return true;
   });
 
-  state.filtered = arr;
-  render();
+  // phân trang
+  pageSize = pageSizeSel.value === 'all' ? data.length || 1 : Number(pageSizeSel.value);
+  totalPages = Math.max(1, Math.ceil(data.length / (pageSize||1)));
+  if (page>totalPages) page = totalPages;
+
+  renderTable();
+  updateFooter();
 }
 
-function getPageItems(){
-  if(state.pageSize === 'all') return state.filtered;
-  const size = Number(state.pageSize);
-  const start = (state.page-1)*size;
-  return state.filtered.slice(start, start+size);
-}
-
-function render(){
-  // Table
-  const rows = getPageItems();
+function renderTable(){
   tbody.innerHTML = '';
-  rows.forEach((x,idx)=>{
+  const start = (page-1)*pageSize;
+  const end = Math.min(data.length, start + pageSize);
+  const rows = (pageSizeSel.value==='all') ? data : data.slice(start, end);
+
+  rows.forEach((x, i)=>{
     const tr = document.createElement('tr');
 
-    const stt = (state.pageSize === 'all')
-      ? idx+1
-      : (idx+1) + (state.page-1)*Number(state.pageSize);
+    const stt = (pageSizeSel.value==='all') ? (i+1) : (start+i+1);
 
     tr.innerHTML = `
-      <td class="stt">${stt}</td>
-      <td class="double-link" data-id="${x.id}">${x.name}</td>
+      <td class="nowrap">${stt}</td>
+      <td class="nowrap" title="${x.name}">${x.name}</td>
       <td>${x.gender||''}</td>
-      <td>${x.dept||''}</td>
-      <td>${x.cell||''}</td>
-      <td>${x.card||''}</td>
-      <td>${formatDate(x.joined_at)}</td>
-      <td>${partyAge(x.joined_at)}</td>
-      <td>${x.email||''}</td>
+      <td>${x.unit||''}</td>
+      <td>${x.branch||''}</td>
+      <td>${x.card_no||''}</td>
+      <td class="nowrap">${formatDateISO(x.joined_at)}</td>
+      <td>${calcAgeParty(x.joined_at)}</td>
+      <td class="nowrap" title="${x.email||''}">${x.email||''}</td>
       <td>${x.status||''}</td>
     `;
-    tr.querySelector('.double-link').ondblclick = ()=>openDetail(x.id);
+    // dblclick vào cột tên
+    tr.children[1].style.cursor='zoom-in';
+    tr.children[1].ondblclick = ()=>openDetail(x);
+
     tbody.appendChild(tr);
   });
-
-  // Footer info & pager
-  const total = state.filtered.length;
-  const showing = rows.length;
-  summary.textContent =
-    `Hiển thị ${showing}/${total} – Cập nhật: ${new Date().toLocaleTimeString('vi-VN')}`;
-
-  let totalPages = 1;
-  if(state.pageSize === 'all') totalPages = 1;
-  else totalPages = Math.max(1, Math.ceil(total/Number(state.pageSize)));
-
-  if(state.page > totalPages) state.page = totalPages;
-  pageInfo.textContent = `Trang ${state.page}/${totalPages}`;
-  $('#prev').disabled = state.page<=1;
-  $('#next').disabled = state.page>=totalPages;
 }
 
-/* ====== Sự kiện giao diện ====== */
-async function init(){
-  await fetchAll();
-  applyFilters(); // render lần đầu
-
-  // nhập ô tìm kiếm
-  let timer;
-  $('#q').addEventListener('input',(e)=>{
-    state.q = e.target.value;
-    clearTimeout(timer); timer=setTimeout(()=>{state.page=1;applyFilters()},180);
-  });
-
-  $('#from').addEventListener('change',e=>{state.from=e.target.value;state.page=1;applyFilters()});
-  $('#to').addEventListener('change',e=>{state.to=e.target.value;state.page=1;applyFilters()});
-  $('#status').addEventListener('change',e=>{state.status=e.target.value;state.page=1;applyFilters()});
-
-  pageSizeEl.addEventListener('change', e=>{
-    state.pageSize = e.target.value==='all'?'all':Number(e.target.value);
-    state.page = 1; render();
-  });
-
-  $('#prev').onclick = ()=>{ if(state.page>1){state.page--; render();} };
-  $('#next').onclick = ()=>{ state.page++; render(); };
-
-  $('#refreshBtn').onclick = async ()=>{
-    await fetchAll(); state.page=1; applyFilters();
-  };
-
-  // toggle xuất tất cả
-  $('#exportAllToggle').onclick = ()=>{
-    state.exportAll = !state.exportAll;
-    $('#exportAllIcon').textContent = state.exportAll ? '■' : '□';
-  };
-
-  $('#btnPrint').onclick = ()=>window.print();
-  $('#btnExport').onclick = ()=>exportExcel();
-}
-init().catch(err=>alert(err.message||err));
-
-/* ====== Excel (.xlsx) ======
-   Dùng xlsx-js-style để set style cơ bản.
-*/
-function buildAoa(items){
-  const header = [
-    'STT','Họ và tên','Giới tính','Đơn vị/Bộ phận','Chi bộ',
-    'Số thẻ Đảng viên','Ngày vào Đảng','Tuổi Đảng','Email','Trạng thái'
-  ];
-  const rows = [header];
-  items.forEach((x,i)=>{
-    rows.push([
-      i+1, x.name||'', x.gender||'', x.dept||'', x.cell||'',
-      x.card||'', formatDate(x.joined_at), partyAge(x.joined_at),
-      x.email||'', x.status||''
-    ]);
-  });
-  return rows;
+function updateFooter(){
+  stats.textContent = `Hiển thị ${data.length ? Math.min(data.length, page*pageSize) - ((page-1)*pageSize) : 0}/${data.length} – Cập nhật: ${new Date().toLocaleTimeString('vi-VN')}`;
+  pageInfo.textContent = `Trang ${page}/${totalPages}`;
+  const ftxt = (fromDate.value || toDate.value)
+    ? `Từ ngày ${fromDate.value||'…'} – Đến ngày ${toDate.value||'…'}`
+    : '';
+  subline.textContent = ftxt;
 }
 
+/* ============ Excel (xlsx) ============ */
 function exportExcel(){
-  const dataset = state.exportAll ? state.filtered : getPageItems();
-  if(!dataset.length){ alert('Không có dữ liệu để xuất'); return; }
+  const rows = exportAllChk.checked ? data : (()=>{ // theo phân trang
+    const start = (page-1)*pageSize;
+    const end = Math.min(data.length, start+pageSize);
+    return data.slice(start, end);
+  })();
 
-  const aoa = buildAoa(dataset);
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  if (!rows.length){ alert("Không có dữ liệu để xuất."); return; }
 
-  // style header
-  const range = XLSX.utils.decode_range(ws['!ref']);
-  for(let c=range.s.c; c<=range.e.c; c++){
-    const cell = XLSX.utils.encode_cell({r:0,c});
-    if(!ws[cell]) continue;
-    ws[cell].s = {
-      font:{bold:true},
-      alignment:{horizontal:'center',vertical:'center'},
-      fill:{fgColor:{rgb:'DDE8FF'}},
-      border:{
-        top:{style:'thin',color:{rgb:'999999'}},
-        left:{style:'thin',color:{rgb:'999999'}},
-        right:{style:'thin',color:{rgb:'999999'}},
-        bottom:{style:'thin',color:{rgb:'999999'}}
-      }
-    };
-  }
+  // Chuẩn hoá thành mảng object đơn giản
+  const out = rows.map((x, idx)=>({
+    STT: idx + 1,
+    "Họ và tên": x.name || '',
+    "Giới tính": x.gender || '',
+    "Đơn vị/Bộ phận": x.unit || '',
+    "Chi bộ": x.branch || '',
+    "Số thẻ Đảng viên": x.card_no || '',
+    "Ngày vào Đảng": formatDateISO(x.joined_at),
+    "Tuổi Đảng": calcAgeParty(x.joined_at),
+    "Email": x.email || '',
+    "Trạng thái": x.status || ''
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(out, {origin: "A2"});
+  // hàng tiêu đề
+  const headers = Object.keys(out[0]);
+  headers.forEach((h, i)=>{ ws[XLSX.utils.encode_cell({r:1, c:i})] = { t:'s', v:h }; });
   ws['!cols'] = [
-    {wch:6},{wch:28},{wch:12},{wch:24},{wch:14},
-    {wch:18},{wch:14},{wch:10},{wch:26},{wch:16}
+    {wch:6},{wch:24},{wch:10},{wch:22},{wch:18},{wch:16},{wch:12},{wch:10},{wch:28},{wch:16}
   ];
+
+  // Tiêu đề + dòng thời gian
+  const title = [["Danh sách Đảng viên"], [subline.textContent||""]];
+  const ws2 = XLSX.utils.aoa_to_sheet(title);
+  XLSX.utils.sheet_add_json(ws2, out, {origin:"A4"});
+  ws2['!cols'] = ws['!cols'];
 
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Dang vien');
+  XLSX.utils.book_append_sheet(wb, ws2, "Danh sách");
 
-  // thêm dòng tiêu đề + khoảng ngày vào A1 bằng sheet mới đẹp hơn
-  // (đơn giản – đã style ở header)
-  const fileName = `Danh_sach_Dang_vien_${new Date().toISOString().slice(0,10)}.xlsx`;
-  XLSX.writeFile(wb, fileName);
+  try{
+    const buf = XLSX.write(wb, {type:'array', bookType:'xlsx'});
+    saveAs(new Blob([buf],{type:"application/octet-stream"}), "Danh_sach_Dang_vien.xlsx");
+  }catch(e){
+    console.error(e);
+    alert("Xuất Excel thất bại!");
+  }
 }
 
-/* ====== Modal chi tiết + DOCX ====== */
-function openDetail(id){
-  const item = state.all.find(x=>x.id==id);
-  if(!item) return;
-  state.currentDetail = item;
+/* ============ In danh sách ============ */
+function printList(){
+  window.print();
+}
 
-  $('#mdTitle').textContent = `Thông tin đảng viên – #${item.id}`;
-  $('#mdName').value   = item.name||'';
-  $('#mdGender').value = item.gender||'';
-  $('#mdDept').value   = item.dept||'';
-  $('#mdCell').value   = item.cell||'';
-  $('#mdCard').value   = item.card||'';
-  $('#mdJoin').value   = item.joined_at? new Date(item.joined_at).toISOString().slice(0,10):'';
-  $('#mdEmail').value  = item.email||'';
-  $('#mdStatus').value = item.status||'';
-  $('#mdNote').value   = item.note||'';
+/* ============ Modal chi tiết ============ */
+function openDetail(x){
+  currentDetail = x;
+  dlgTitle.textContent = `Chi tiết Đảng viên — ${x.name}`;
+  f_name.value = x.name || '';
+  f_gender.value = x.gender || 'Nam';
+  f_unit.value = x.unit || '';
+  f_branch.value = x.branch || '';
+  f_card.value = x.card_no || '';
+  f_joined.value = formatDateISO(x.joined_at);
+  f_email.value = x.email || '';
+  f_status.value = x.status || 'Đang sinh hoạt';
+  f_note.value = x.note || '';
 
-  $('#mDetail').classList.add('open');
+  setEditable(false);
+  dlg.classList.add('show');
+}
+function closeDetail(){ dlg.classList.remove('show'); }
+dlgClose.onclick = closeDetail;
 
-  // nút In – in modal
-  $('#btnPrintDetail').onclick = ()=>{
-    // tạm in cả trang – thường sẽ in riêng modal, ở đây cho nhanh
-    window.print();
-  };
+function setEditable(en){
+  [f_name,f_gender,f_unit,f_branch,f_card,f_joined,f_email,f_status,f_note]
+    .forEach(el=>el.disabled = !en);
+  btnSave.disabled = !en;
+  btnEdit.disabled = en;
+}
+btnEdit.onclick = ()=> setEditable(true);
 
-  // lưu tạm (local, không gọi API)
-  $('#btnSave').onclick = ()=>{
-    Object.assign(item,{
-      name:$('#mdName').value.trim(),
-      gender:$('#mdGender').value.trim(),
-      dept:$('#mdDept').value.trim(),
-      cell:$('#mdCell').value.trim(),
-      card:$('#mdCard').value.trim(),
-      joined_at:$('#mdJoin').value? new Date($('#mdJoin').value):'',
-      email:$('#mdEmail').value.trim(),
-      status:$('#mdStatus').value.trim(),
-      note:$('#mdNote').value.trim(),
+btnSave.onclick = async ()=>{
+  if(!currentDetail) return;
+  // cập nhật local
+  currentDetail.name = f_name.value.trim();
+  currentDetail.gender = f_gender.value;
+  currentDetail.unit = f_unit.value.trim();
+  currentDetail.branch = f_branch.value.trim();
+  currentDetail.card_no = f_card.value.trim();
+  currentDetail.joined_at = f_joined.value;
+  currentDetail.email = f_email.value.trim();
+  currentDetail.status = f_status.value;
+  currentDetail.note = f_note.value.trim();
+
+  // thử gửi lên server (nếu có hỗ trợ)
+  try{
+    await fetch(`${API_URL}/${currentDetail.id}`,{
+      method:'PUT',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(currentDetail)
     });
-    applyFilters();
-    alert('Đã lưu tạm ở phiên trình duyệt.');
-  };
+  }catch(e){
+    console.warn("PUT bị chặn hoặc không hỗ trợ – lưu ở UI:", e);
+  }
+  // render lại
+  applyFilters();
+  setEditable(false);
+  alert("Đã lưu thay đổi.");
+};
 
-  // Xuất DOCX
-  $('#btnDocx').onclick = ()=>exportDocx(item);
-}
-function closeDetail(){ $('#mDetail').classList.remove('open'); }
+/* In chi tiết 1 đảng viên (theo mẫu gọn) */
+btnPrintOne.onclick = ()=>{
+  const w = window.open("", "_blank");
+  const x = currentDetail;
+  const html = `
+    <html><head>
+      <meta charset="utf-8"/>
+      <title>Lý lịch Đảng viên</title>
+      <style>
+        body{ font-family:"Times New Roman", Times, serif; }
+        h2{ text-align:center; margin:0 0 8px; }
+        .grid{ display:grid; grid-template-columns: 220px 1fr; row-gap:8px; column-gap:10px; }
+        .row{ display:contents; }
+        .label{ color:#444; }
+        @page{ size:A4; margin:15mm; }
+      </style>
+    </head>
+    <body>
+      <h2>Lý lịch Đảng viên</h2>
+      <div class="grid">
+        <div class="label">Họ và tên</div><div>${x.name||''}</div>
+        <div class="label">Giới tính</div><div>${x.gender||''}</div>
+        <div class="label">Đơn vị/Bộ phận</div><div>${x.unit||''}</div>
+        <div class="label">Chi bộ</div><div>${x.branch||''}</div>
+        <div class="label">Số thẻ Đảng viên</div><div>${x.card_no||''}</div>
+        <div class="label">Ngày vào Đảng</div><div>${formatDateISO(x.joined_at)}</div>
+        <div class="label">Tuổi Đảng</div><div>${calcAgeParty(x.joined_at)}</div>
+        <div class="label">Email</div><div>${x.email||''}</div>
+        <div class="label">Trạng thái</div><div>${x.status||''}</div>
+        <div class="label">Ghi chú</div><div>${x.note||''}</div>
+      </div>
+      <script>window.onload=()=>window.print();</script>
+    </body></html>`;
+  w.document.write(html); w.document.close();
+};
 
-async function exportDocx(item){
-  const {Document, Packer, Paragraph, TextRun} = window.docx;
+/* DOCX chi tiết một đảng viên */
+btnDocx.onclick = async ()=>{
+  if(!currentDetail) return;
+  const {Document, Packer, Paragraph, TextRun, HeadingLevel} = docx;
 
-  const p = (t,b=false)=> new Paragraph({
-    children:[ new TextRun({text:t,bold:b,font:'Times New Roman'}) ],
-    spacing:{after:120}
-  });
+  const x = currentDetail;
 
   const doc = new Document({
-    sections:[{
-      properties:{},
+    styles: { default: { document: { run: { font: "Times New Roman", size: 24 } } } }
+  });
+
+  function p(label, value){
+    return new Paragraph({
       children:[
-        p('THÔNG TIN ĐẢNG VIÊN', true),
-        p(`Họ và tên: ${item.name||''}`),
-        p(`Giới tính: ${item.gender||''}`),
-        p(`Đơn vị/Bộ phận: ${item.dept||''}`),
-        p(`Chi bộ: ${item.cell||''}`),
-        p(`Số thẻ Đảng viên: ${item.card||''}`),
-        p(`Ngày vào Đảng: ${formatDate(item.joined_at)}`),
-        p(`Tuổi Đảng: ${partyAge(item.joined_at)}`),
-        p(`Email: ${item.email||''}`),
-        p(`Trạng thái: ${item.status||''}`),
-        p(`Ghi chú: ${item.note||''}`)
+        new TextRun({ text: `${label}: `, bold:true }),
+        new TextRun({ text: value || "" })
       ]
-    }]
+    });
+  }
+
+  doc.addSection({
+    properties:{ page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } } }, // 720 = 1/2.54cm
+    children: [
+      new Paragraph({ text: "Lý lịch Đảng viên", heading: HeadingLevel.HEADING_1, alignment: docx.AlignmentType.CENTER }),
+      new Paragraph({ text: "" }),
+      p("Họ và tên", x.name),
+      p("Giới tính", x.gender),
+      p("Đơn vị/Bộ phận", x.unit),
+      p("Chi bộ", x.branch),
+      p("Số thẻ Đảng viên", x.card_no),
+      p("Ngày vào Đảng", formatDateISO(x.joined_at)),
+      p("Tuổi Đảng", calcAgeParty(x.joined_at)),
+      p("Email", x.email),
+      p("Trạng thái", x.status),
+      p("Ghi chú", x.note)
+    ]
   });
 
   const blob = await Packer.toBlob(doc);
-  const name = (item.name||'dang_vien').replace(/\s+/g,'_');
-  saveBlob(blob, `Chi_tiet_${name}.docx`);
-}
+  saveAs(blob, `Ly_lich_Dang_vien_${(x.name||'').replace(/\s+/g,'_')}.docx`);
+};
 
-/* ====== Lưu blob ====== */
-function saveBlob(blob, fileName){
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = fileName;
-  document.body.appendChild(a); a.click();
-  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},0);
-}
+/* ============ Sự kiện ============ */
+[q,statusSel,fromDate,toDate,pageSizeSel].forEach(el=>{
+  el.addEventListener('input', ()=>{ page=1; applyFilters(); });
+});
+btnRefresh.onclick = ()=>{ page=1; q.value=''; statusSel.value=''; fromDate.value=''; toDate.value=''; applyFilters(); };
+prevBtn.onclick = ()=>{ if(page>1){ page--; renderTable(); updateFooter(); } };
+nextBtn.onclick = ()=>{ if(page<totalPages){ page++; renderTable(); updateFooter(); } };
+btnExcel.onclick = exportExcel;
+btnPrint.onclick = printList;
+
+window.addEventListener('keydown', (e)=>{
+  if(e.key==='Escape') closeDetail();
+});
+
+/* ============ Khởi chạy ============ */
+(async function init(){
+  await fetchAll();
+  applyFilters();
+})();
