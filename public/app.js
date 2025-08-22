@@ -1,7 +1,7 @@
-/* ====== Cấu hình & Helper ====== */
+/* ================== Cấu hình & Helper ================== */
 const API_URL = "https://dangvien-app.onrender.com/members";
 
-/* bỏ dấu & lower-case để tìm kiếm kiểu Google */
+/* Chuẩn hoá chuỗi: bỏ dấu + lower-case (tìm kiểu Google) */
 function norm(s = "") {
   return s
     .normalize("NFD")
@@ -25,27 +25,26 @@ function yearsDiff(d) {
   return `${y} năm`;
 }
 
-/* ========= state ========= */
+/* ================== State ================== */
 const state = {
-  raw: [],           // toàn bộ dữ liệu từ API
-  items: [],         // sau khi filter + map
+  raw: [],     // dữ liệu gốc
+  items: [],   // sau filter/map
   page: 1,
   pageSize: 10,
   total: 0,
 };
-
 const $ = (sel) => document.querySelector(sel);
 const tbody = $("#tbody");
 const info = $("#info");
 const pageInfo = $("#pageInfo");
 
-/* ========= load data ========= */
+/* ================== Load data ================== */
 async function fetchAll() {
   const res = await fetch(API_URL, { headers: { Accept: "application/json" }});
   const js = await res.json();
   const arr = Array.isArray(js) ? js : (js.data ?? []);
 
-  // Chuẩn hóa để luôn có đầy đủ trường (demo sinh dữ liệu phụ)
+  // Map về đầy đủ trường (thêm demo field cho đẹp bảng)
   state.raw = arr.map((x, idx) => ({
     id: x.id ?? idx + 1,
     name: x.name ?? "N/A",
@@ -61,7 +60,7 @@ async function fetchAll() {
   }));
 }
 
-/* ========= filter & render ========= */
+/* ================== Filter & render ================== */
 function applyFilter() {
   const kw = norm($("#kw").value);
   const from = $("#fromDate").value ? new Date($("#fromDate").value) : null;
@@ -69,26 +68,25 @@ function applyFilter() {
   const stt  = $("#status").value;
 
   let items = state.raw.filter((m) => {
-    // tìm theo tên/email (không dấu)
+    // Tìm theo tên & email
     if (kw) {
       const ok =
         norm(m.name).includes(kw) ||
         norm(m.email).includes(kw);
       if (!ok) return false;
     }
-    // ngày vào đảng
+    // Khoảng ngày
     if (from || to) {
       const dt = m.join_date ? new Date(m.join_date) : null;
       if (!dt || Number.isNaN(dt)) return false;
       if (from && dt < from) return false;
       if (to && dt > to) return false;
     }
-    // trạng thái
+    // Trạng thái
     if (stt && m.status !== stt) return false;
     return true;
   });
 
-  // mapping hiển thị
   items = items.map((m) => ({
     ...m,
     join_date_text: ymd(m.join_date),
@@ -98,10 +96,11 @@ function applyFilter() {
   state.items = items;
   state.total = items.length;
 
-  // page size
+  // Page size
   const ps = $("#pageSize").value;
   state.pageSize = ps === "all" ? state.total || 1 : +ps;
   if (state.pageSize <= 0) state.pageSize = 10;
+
   const maxPage = Math.max(1, Math.ceil(state.total / state.pageSize));
   state.page = Math.min(state.page, maxPage);
 
@@ -118,26 +117,25 @@ function render() {
     .map((m, i) => {
       const stt = pageSize === state.total ? i + 1 : start + i + 1;
       return `
-      <tr>
-        <td class="text-center">${stt}</td>
-        <td class="text-primary col-name" role="button"
-            ondblclick='openDetail(${JSON.stringify(m.id)})'
-            title="Nháy đúp để xem chi tiết">
-          ${m.name}
-        </td>
-        <td class="text-center">${m.gender}</td>
-        <td>${m.unit}</td>
-        <td>${m.branch}</td>
-        <td class="text-center">${m.card_no || ""}</td>
-        <td class="text-center nowrap">${m.join_date_text || ""}</td>
-        <td class="text-center nowrap">${m.age_text}</td>
-        <td class="nowrap">${m.email}</td>
-        <td class="nowrap">${m.status}</td>
-      </tr>`;
+        <tr>
+          <td class="text-center">${stt}</td>
+          <td class="text-primary col-name" role="button"
+              ondblclick='openDetail(${JSON.stringify(m.id)})'
+              title="Nháy đúp để xem chi tiết">
+            ${m.name}
+          </td>
+          <td class="text-center">${m.gender}</td>
+          <td>${m.unit}</td>
+          <td>${m.branch}</td>
+          <td class="text-center">${m.card_no || ""}</td>
+          <td class="text-center nowrap">${m.join_date_text || ""}</td>
+          <td class="text-center nowrap">${m.age_text}</td>
+          <td class="nowrap">${m.email}</td>
+          <td class="nowrap">${m.status}</td>
+        </tr>`;
     })
     .join("");
 
-  // info + pager
   const shown = slice.length;
   info.textContent = `Hiển thị ${shown}/${total} – Cập nhật: ${new Date()
     .toLocaleTimeString("vi-VN")}`;
@@ -145,7 +143,7 @@ function render() {
   pageInfo.textContent = `Trang ${state.page}/${maxPage}`;
 }
 
-/* ========= paging ========= */
+/* ================== Paging ================== */
 $("#prev").onclick = () => {
   const maxPage = Math.max(1, Math.ceil(state.total / state.pageSize));
   state.page = Math.max(1, state.page - 1);
@@ -159,7 +157,7 @@ $("#next").onclick = () => {
   render();
 };
 
-/* ========= Excel (đủ cột như bảng) ========= */
+/* ================== Excel (đủ cột như bảng) ================== */
 function exportExcel() {
   const header = [
     "STT","Họ và tên","Giới tính","Đơn vị/Bộ phận","Chi bộ",
@@ -190,7 +188,7 @@ function exportExcel() {
   });
 
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  // nhẹ: đặt width cột cho đẹp
+  // Width cột giúp dữ liệu ít xuống dòng khi xem/print từ Excel
   ws["!cols"] = [
     { wch: 5 }, { wch: 25 }, { wch: 8 }, { wch: 18 }, { wch: 12 },
     { wch: 16 }, { wch: 14 }, { wch: 10 }, { wch: 26 }, { wch: 14 },
@@ -200,7 +198,7 @@ function exportExcel() {
   XLSX.writeFile(wb, "Danh_sach_Dang_vien.xlsx");
 }
 
-/* ========= Detail modal ========= */
+/* ================== Detail modal ================== */
 let currentDetail = null;
 
 function renderDetail(m, editable=false) {
@@ -250,12 +248,11 @@ $("#mEdit").onclick = () => {
 };
 $("#mSave").onclick = () => {
   if (!currentDetail) return;
-  // đọc lại input trong modal, cập nhật vào currentDetail & state.raw
+  // đọc lại input trong modal, cập nhật vào currentDetail
   $("#detailView").querySelectorAll("input[data-k]").forEach(inp=>{
     const k = inp.dataset.k;
     currentDetail[k] = inp.value;
   });
-  // cập nhật lại text ngày/tuổi nếu thay đổi
   if (currentDetail.join_date) {
     currentDetail.join_date_text = ymd(currentDetail.join_date);
     currentDetail.age_text = yearsDiff(currentDetail.join_date);
@@ -266,7 +263,7 @@ $("#mSave").onclick = () => {
   renderDetail(currentDetail, false);
 };
 
-/* In/Docx riêng trong modal */
+/* In/Docx trong modal */
 $("#mPrint").onclick = () => {
   if (!currentDetail) return;
   const w = window.open("", "_blank", "noopener,noreferrer");
@@ -337,9 +334,8 @@ $("#mDocx").onclick = async () => {
   saveAs(blob, `Ly_lich_${currentDetail.name.replace(/\s+/g,"_")}.docx`);
 };
 
-/* ========= In danh sách ========= */
+/* ================== In danh sách ================== */
 function printList() {
-  // hiển thị dòng khoảng ngày trong lúc in
   const from = $("#fromDate").value || "…";
   const to   = $("#toDate").value || "…";
   $("#printRange").textContent = `Từ ngày ${from} đến ngày ${to}`;
@@ -348,18 +344,21 @@ function printList() {
   setTimeout(() => $("#printRange").classList.add("d-none"), 200);
 }
 
-/* ========= Events ========= */
+/* ================== Events ================== */
 const debounce = (fn, t=200) => {
   let it; return (...args) => { clearTimeout(it); it = setTimeout(()=>fn(...args), t); };
 };
-$("#kw").addEventListener("input", debounce(() => { state.page = 1; applyFilter(); }, 120));
+
+$("#kw").addEventListener("input",
+  debounce(() => { state.page = 1; applyFilter(); }, 120));
+
 $("#fromDate").addEventListener("change", () => { state.page = 1; applyFilter(); });
-$("#toDate").addEventListener("change", () => { state.page = 1; applyFilter(); });
-$("#status").addEventListener("change", () => { state.page = 1; applyFilter(); });
+$("#toDate").addEventListener("change",   () => { state.page = 1; applyFilter(); });
+$("#status").addEventListener("change",   () => { state.page = 1; applyFilter(); });
 $("#pageSize").addEventListener("change", () => { state.page = 1; applyFilter(); });
 
 $("#btnRefresh").onclick = () => {
-  // reset về mặc định
+  // Reset về mặc định
   $("#kw").value = "";
   $("#fromDate").value = "";
   $("#toDate").value = "";
@@ -371,7 +370,7 @@ $("#btnRefresh").onclick = () => {
 $("#btnExcel").onclick = () => exportExcel();
 $("#btnPrint").onclick = () => printList();
 
-/* ========= init ========= */
+/* ================== Khởi chạy ================== */
 (async function init(){
   await fetchAll();
   applyFilter();
